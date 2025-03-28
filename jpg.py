@@ -3,6 +3,7 @@ import time
 import urllib.request
 import urllib.error
 import http.client
+import socket  # Добавляем для обработки TimeoutError
 
 # Функция для форматирования времени
 
@@ -48,8 +49,8 @@ def get_uptime(ip_address, username, password):
             if content.startswith("uptime="):
                 return float(content.split("=")[1])
             return None
-    except (urllib.error.URLError, ValueError, http.client.HTTPException):
-        return None
+    except (urllib.error.URLError, ValueError, http.client.HTTPException, socket.TimeoutError):
+        return None  # Возвращаем None при любых ошибках, включая таймаут
 
 
 # Чтение данных из файла auth
@@ -120,7 +121,7 @@ timeout = 5
 start_time = time.time()
 last_uptime = initial_uptime
 reboot_detected = False
-connection_issues = False  # Флаг для проблем с соединением
+connection_issues = False
 
 # Основной цикл съемки
 for i in range(1, num_screenshots + 1):
@@ -144,6 +145,10 @@ for i in range(1, num_screenshots + 1):
         failure_count += 1
         connection_issues = True
         print(f"Ошибка при снятии скриншота {i}: разрыв соединения ({e})")
+    except socket.TimeoutError:
+        failure_count += 1
+        connection_issues = True
+        print(f"Ошибка при снятии скриншота {i}: таймаут на уровне сокета")
 
     # Получение текущего uptime
     current_uptime = get_uptime(ip_address, username, password)
@@ -156,8 +161,7 @@ for i in range(1, num_screenshots + 1):
     elif current_uptime is not None:
         last_uptime = current_uptime
     else:
-        # Если uptime не удалось получить, считаем это проблемой соединения
-        connection_issues = True
+        connection_issues = True  # Если uptime не удалось получить, считаем это проблемой
 
     # Расчет процентов и времени
     current_success_percentage = (success_count / i) * 100 if i > 0 else 0
@@ -191,10 +195,64 @@ for i in range(1, num_screenshots + 1):
 
 # Итоговый результат
 success_percentage = (success_count / num_screenshots) * \
-    100 if num_screenshots > 0 else 0
+                      100 if num_screenshots > 0 else 0
 print(f"\nСъемка завершена.")
 print(
     f"Успешно снято {success_count} из {num_screenshots} скриншотов ({success_percentage:.2f}%).")
 print(f"Стабильность устройства: "
       f"{'Перезагрузка зафиксирована' if reboot_detected else 'Перезагрузок не было'}, "
-      f"{'проблемы с соединением были' if connection_issues else 'соединение стабильно'}")
+Traceback(most recent call last):
+  File "/home/kira/Документы/Python/TOP_auto_test/jpg.py", line 149, in <module >
+    current_uptime=get_uptime(ip_address, username, password)
+                     ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/home/kira/Документы/Python/TOP_auto_test/jpg.py", line 46, in get_uptime
+    with opener.open(url, timeout=5) as response:
+         ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response=meth(req, response)
+               ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response=self.parent.error(
+               ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 553, in error
+    result=self._call_chain(*args)
+             ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result=func(*args)
+             ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 1052, in http_error_401
+    response=self.http_error_auth_reqed('www-authenticate',
+               ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 1001, in http_error_auth_reqed
+    return self.retry_http_basic_auth(host, req, realm)
+           ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 1016, in retry_http_basic_auth
+    return self.parent.open(req, timeout=req.timeout)
+           ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 515, in open
+    response=self._open(req, data)
+               ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 532, in _open
+    result=self._call_chain(self.handle_open, protocol, protocol +
+             ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result=func(*args)
+             ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 1373, in http_open
+    return self.do_open(http.client.HTTPConnection, req)
+           ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/urllib/request.py", line 1348, in do_open
+    r=h.getresponse()
+        ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/http/client.py", line 1428, in getresponse
+    response.begin()
+  File "/usr/lib/python3.12/http/client.py", line 331, in begin
+    version, status, reason=self._read_status()
+                              ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/http/client.py", line 292, in _read_status
+    line=str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
+TimeoutError: timed out
