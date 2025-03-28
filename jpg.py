@@ -3,63 +3,51 @@ import time
 import urllib.request
 import urllib.error
 
-# Функция для форматирования времени в человеко-читаемый вид
+# Функция для форматирования времени
 
 
 def format_time(seconds):
     if seconds == 0:
         return "0 секунд"
-
     days = seconds // (24 * 3600)
     seconds %= (24 * 3600)
     hours = seconds // 3600
     seconds %= 3600
     minutes = seconds // 60
     seconds %= 60
-
     time_parts = []
     if days > 0:
-        time_parts.append(
-            f"{days} день{'/дня/дней' if days % 10 in [2, 3, 4] and days % 100 not in [12, 13, 14] else 'ь' if days == 1 else 'ей'}")
+        time_parts.append(f"{days} день" if days == 1 else f"{days} дня" if days in [
+                          2, 3, 4] else f"{days} дней")
     if hours > 0:
-        time_parts.append(
-            f"{hours} час{'а/ов' if hours % 10 in [2, 3, 4] and hours % 100 not in [12, 13, 14] else '' if hours == 1 else 'ов'}")
+        time_parts.append(f"{hours} час" if hours == 1 else f"{hours} часа" if hours in [
+                          2, 3, 4] else f"{hours} часов")
     if minutes > 0:
-        time_parts.append(
-            f"{minutes} минут{'а/ы' if minutes % 10 in [2, 3, 4] and minutes % 100 not in [12, 13, 14] else 'а' if minutes == 1 else ''}")
+        time_parts.append(f"{minutes} минута" if minutes == 1 else f"{minutes} минуты" if minutes in [
+                          2, 3, 4] else f"{minutes} минут")
     if seconds > 0 or not time_parts:
-        time_parts.append(
-            f"{seconds} секунд{'а/ы' if seconds % 10 in [2, 3, 4] and seconds % 100 not in [12, 13, 14] else 'а' if seconds == 1 else ''}")
-
+        time_parts.append(f"{seconds} секунда" if seconds == 1 else f"{seconds} секунды" if seconds in [
+                          2, 3, 4] else f"{seconds} секунд")
     return ", ".join(time_parts)
 
 
 # Чтение IP-адреса из файла auth
 try:
     with open('auth', 'r') as file:
-        lines = file.readlines()
-        if len(lines) < 1:
-            raise ValueError(
-                "Файл auth должен содержать как минимум одну строку с IP-адресом")
-        ip_address = lines[0].strip()
+        ip_address = file.readline().strip()
 except FileNotFoundError:
     print("Файл auth не найден")
     exit(1)
-except ValueError as e:
-    print(e)
-    exit(1)
 
-# Путь к папке для сохранения скриншотов
+# Путь к папке для скриншотов
 screenshot_dir = 'jpg'
-
-# Очистка папки jpg перед началом съемки
 if os.path.exists(screenshot_dir):
     for file in os.listdir(screenshot_dir):
         os.remove(os.path.join(screenshot_dir, file))
 else:
     os.makedirs(screenshot_dir)
 
-# Запрос у пользователя количества скриншотов
+# Ввод количества скриншотов
 try:
     num_screenshots = int(input("Сколько скриншотов вы хотите снять? "))
     if num_screenshots <= 0:
@@ -68,66 +56,65 @@ except ValueError:
     print("Пожалуйста, введите положительное целое число.")
     exit(1)
 
-# Расчет общего времени выполнения в секундах
-total_time_seconds = num_screenshots * 10
+# Пауза между скриншотами как переменная (в секундах)
+pause_between_shots = 1  # Можно изменить, например, на 1, 5, 15 и т.д.
 
-# Форматирование времени
-formatted_time = format_time(total_time_seconds)
+# Расчет общего времени (паузы между скриншотами)
+total_time_seconds = (num_screenshots - 1) * pause_between_shots
+print(
+    f"Съемка {num_screenshots} скриншотов займет {format_time(total_time_seconds)}.")
 
-# Вывод времени выполнения
-print(f"Съемка {num_screenshots} скриншотов займет {formatted_time}.")
-
-# URL для снятия скриншота с использованием IP-адреса из файла
+# URL для скриншотов
 url = f"http://{ip_address}:85/image.jpg"
 
-# Счетчики успешных и неуспешных попыток
+# Счетчики
 success_count = 0
 failure_count = 0
 
-# Время начала съемки
+# Начало съемки
 start_time = time.time()
 
-# Съемка скриншотов
+# Основной цикл съемки
 for i in range(1, num_screenshots + 1):
     try:
-        # Выполнение HTTP-запроса
         with urllib.request.urlopen(url) as response:
             if response.status == 200:
-                # Сохранение скриншота (закомментировано по вашему запросу)
+                success_count += 1
+                # Раскомментируйте, если нужно сохранять файлы
                 # screenshot_path = os.path.join(screenshot_dir, f"screenshot_{i}.jpg")
                 # with open(screenshot_path, 'wb') as file:
                 #     file.write(response.read())
-                success_count += 1
             else:
                 failure_count += 1
     except urllib.error.URLError as e:
         print(f"Ошибка при снятии скриншота {i}: {e}")
         failure_count += 1
 
-    # Расчет оставшихся скриншотов и времени
+    # Текущий процент успеха
+    current_success_percentage = (success_count / i) * 100 if i > 0 else 0
+
+    # Оставшиеся скриншоты
     remaining_screenshots = num_screenshots - i
-    elapsed_time = time.time() - start_time
+
+    # Расчет оставшегося времени на основе среднего времени
     if i > 0:
+        elapsed_time = time.time() - start_time
         average_time_per_screenshot = elapsed_time / i
         remaining_time_seconds = int(
             average_time_per_screenshot * remaining_screenshots)
     else:
         remaining_time_seconds = 0
 
-    # Форматирование оставшегося времени
-    formatted_remaining_time = format_time(remaining_time_seconds)
-
     # Вывод текущего статуса
-    print(f"Снято {i} из {num_screenshots} скриншотов. Осталось {remaining_screenshots} скриншотов, примерно {formatted_remaining_time}.")
+    print(f"{current_success_percentage:.0f}%. Снято {i} из {num_screenshots} скриншотов. "
+          f"Осталось {remaining_screenshots} скриншотов, примерно {format_time(remaining_time_seconds)}.")
 
-    # Пауза 10 секунд между снимками
-    if i < num_screenshots:  # Не делаем паузу после последнего скриншота
-        time.sleep(10)
+    # Пауза (кроме последней итерации)
+    if i < num_screenshots:
+        time.sleep(pause_between_shots)
 
-# Подсчет процента успешных скриншотов
+# Итоговый результат
 success_percentage = (success_count / num_screenshots) * \
     100 if num_screenshots > 0 else 0
-
-# Вывод результата
 print(
     f"Съемка завершена. Успешно снято {success_count} из {num_screenshots} скриншотов ({success_percentage:.2f}%).")
