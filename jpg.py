@@ -3,6 +3,37 @@ import time
 import urllib.request
 import urllib.error
 
+# Функция для форматирования времени в человеко-читаемый вид
+
+
+def format_time(seconds):
+    if seconds == 0:
+        return "0 секунд"
+
+    days = seconds // (24 * 3600)
+    seconds %= (24 * 3600)
+    hours = seconds // 3600
+    seconds %= 3600
+    minutes = seconds // 60
+    seconds %= 60
+
+    time_parts = []
+    if days > 0:
+        time_parts.append(
+            f"{days} день{'/дня/дней' if days % 10 in [2, 3, 4] and days % 100 not in [12, 13, 14] else 'ь' if days == 1 else 'ей'}")
+    if hours > 0:
+        time_parts.append(
+            f"{hours} час{'а/ов' if hours % 10 in [2, 3, 4] and hours % 100 not in [12, 13, 14] else '' if hours == 1 else 'ов'}")
+    if minutes > 0:
+        time_parts.append(
+            f"{minutes} минут{'а/ы' if minutes % 10 in [2, 3, 4] and minutes % 100 not in [12, 13, 14] else 'а' if minutes == 1 else ''}")
+    if seconds > 0 or not time_parts:
+        time_parts.append(
+            f"{seconds} секунд{'а/ы' if seconds % 10 in [2, 3, 4] and seconds % 100 not in [12, 13, 14] else 'а' if seconds == 1 else ''}")
+
+    return ", ".join(time_parts)
+
+
 # Чтение IP-адреса из файла auth
 try:
     with open('auth', 'r') as file:
@@ -37,9 +68,14 @@ except ValueError:
     print("Пожалуйста, введите положительное целое число.")
     exit(1)
 
-# Расчет и вывод времени выполнения
-total_time = num_screenshots * 10
-print(f"Съемка {num_screenshots} скриншотов займет {total_time} секунд.")
+# Расчет общего времени выполнения в секундах
+total_time_seconds = num_screenshots * 10
+
+# Форматирование времени
+formatted_time = format_time(total_time_seconds)
+
+# Вывод времени выполнения
+print(f"Съемка {num_screenshots} скриншотов займет {formatted_time}.")
 
 # URL для снятия скриншота с использованием IP-адреса из файла
 url = f"http://{ip_address}:85/image.jpg"
