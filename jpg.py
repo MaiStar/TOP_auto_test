@@ -2,6 +2,7 @@ import os
 import time
 import urllib.request
 import urllib.error
+import http.client
 
 # Функция для форматирования времени
 
@@ -47,7 +48,7 @@ def get_uptime(ip_address, username, password):
             if content.startswith("uptime="):
                 return float(content.split("=")[1])
             return None
-    except (urllib.error.URLError, ValueError):
+    except (urllib.error.URLError, ValueError, http.client.HTTPException):
         return None
 
 
@@ -68,15 +69,13 @@ except ValueError as e:
     print(e)
     exit(1)
 
-"""
 # Путь к папке для скриншотов
 screenshot_dir = 'jpg'
 if os.path.exists(screenshot_dir):
     for file in os.listdir(screenshot_dir):
         os.remove(os.path.join(screenshot_dir, file))
 else:
-    os.makedirs(screenshot_dir)"
-"""
+    os.makedirs(screenshot_dir)
 
 # Ввод количества скриншотов
 try:
@@ -120,7 +119,7 @@ failure_count = 0
 timeout = 5
 start_time = time.time()
 last_uptime = initial_uptime
-reboot_detected = False  # Флаг для отслеживания перезагрузки за весь процесс
+reboot_detected = False
 
 # Основной цикл съемки
 for i in range(1, num_screenshots + 1):
@@ -138,13 +137,16 @@ for i in range(1, num_screenshots + 1):
             print(f"Ошибка при снятии скриншота {i}: таймаут")
         else:
             print(f"Ошибка при снятии скриншота {i}: {e}")
+    except http.client.HTTPException as e:
+        failure_count += 1
+        print(f"Ошибка при снятии скриншота {i}: {e}")
 
     # Получение текущего uptime
     current_uptime = get_uptime(ip_address, username, password)
 
     # Проверка на перезагрузку
     if current_uptime is not None and last_uptime is not None:
-        if current_uptime + 2 < last_uptime:  # Добавляем погрешность в 2 секунды
+        if current_uptime + 2 < last_uptime:  # Погрешность в 2 секунды
             reboot_detected = True
         last_uptime = current_uptime
     elif current_uptime is not None:
