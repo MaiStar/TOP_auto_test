@@ -18,20 +18,6 @@ def format_time(seconds):
     seconds %= 60
     time_parts = []
     if days > 0:
-        time_parts.append(f"{days} день" if days == 1 else f"{days} дня" if days in [
-                          2, 3, 4] else f"{days} дней")
-    if hours > 0:
-        time_parts.append(f"{hours} час" if hours == 1 else f"{hours} часа" if hours in [
-                          2, 3, 4] else f"{hours} часов")
-    if minutes > 0:
-        time_parts.append(f"{minutes} минута" if minutes == 1 else f"{minutes} минуты" if minutes in [
-                          2, 3, 4] else f"{minutes} минут")
-    if seconds > 0 or not time_parts:
-        time_parts.append(f"{seconds} секунда" if seconds == 1 else f"{seconds} секунды" if seconds in [
-                          2, 3, 4] else f"{seconds} секунд")
-    return ", ".join(time_parts)
-
-# Функция для получения uptime
 
 
 def get_uptime(ip_address, username, password):
@@ -43,7 +29,7 @@ def get_uptime(ip_address, username, password):
     url = f"http://{ip_address}:85/cgi-bin/magicBox.cgi?action=getUptime"
 
     try:
-        with opener.open(url) as response:
+        with opener.open(url, timeout=5) as response:
             content = response.read().decode('utf-8')
             if content.startswith("uptime="):
                 return float(content.split("=")[1])
@@ -95,7 +81,7 @@ total_time_seconds = (num_screenshots - 1) * pause_between_shots
 # Получение начального uptime
 initial_uptime = get_uptime(ip_address, username, password)
 if initial_uptime is None:
-    print("Не удалось получить начальный uptime")
+    print("Не удалось получить начальный uptime. Устройство может быть недоступно.")
     exit(1)
 
 # Вывод начальной информации
@@ -108,18 +94,19 @@ remaining %= 3600
 minutes = int(remaining // 60)
 seconds = int(remaining % 60)
 print(
-    f"Время работы: {days} дней, {hours} часов, {minutes} минут, {seconds} секунд")
+    f"Начальное время работы: {days} дней, {hours} часов, {minutes} минут, {seconds} секунд")
 
 # URL для скриншотов
 url = f"http://{ip_address}:85/image.jpg"
 
-# Счетчики
+# Счетчики и флаги
 success_count = 0
 failure_count = 0
 timeout = 5
 start_time = time.time()
 last_uptime = initial_uptime
 reboot_detected = False
+connection_issues = False  # Флаг для проблем с соединением
 
 # Основной цикл съемки
 for i in range(1, num_screenshots + 1):
@@ -129,17 +116,20 @@ for i in range(1, num_screenshots + 1):
                 success_count += 1
             else:
                 failure_count += 1
+                connection_issues = True
                 print(
                     f"Ошибка при снятии скриншота {i}: статус {response.status}")
     except urllib.error.URLError as e:
         failure_count += 1
+        connection_issues = True
         if 'timed out' in str(e):
             print(f"Ошибка при снятии скриншота {i}: таймаут")
         else:
             print(f"Ошибка при снятии скриншота {i}: {e}")
     except http.client.HTTPException as e:
         failure_count += 1
-        print(f"Ошибка при снятии скриншота {i}: {e}")
+        connection_issues = True
+        print(f"Ошибка при снятии скриншота {i}: разрыв соединения ({e})")
 
     # Получение текущего uptime
     current_uptime = get_uptime(ip_address, username, password)
@@ -151,6 +141,9 @@ for i in range(1, num_screenshots + 1):
         last_uptime = current_uptime
     elif current_uptime is not None:
         last_uptime = current_uptime
+    else:
+        # Если uptime не удалось получить, считаем это проблемой соединения
+        connection_issues = True
 
     # Расчет процентов и времени
     current_success_percentage = (success_count / i) * 100 if i > 0 else 0
@@ -170,12 +163,13 @@ for i in range(1, num_screenshots + 1):
         seconds = int(remaining % 60)
         uptime_str = f"Время работы: {days} дней, {hours} часов, {minutes} минут, {seconds} секунд"
     else:
-        uptime_str = "Не удалось получить uptime"
+        uptime_str = "Не удалось получить uptime (устройство недоступно)"
 
     # Вывод статуса
     print(f"{current_success_percentage:.0f}%. Снято {i} из {num_screenshots} скриншотов. "
           f"Осталось {remaining_screenshots} скриншотов, примерно {format_time(remaining_time_seconds)}.")
-    print(f"{'Была перезагрузка' if reboot_detected else 'Без перезагрузки'}")
+    print(f"Состояние: {'Была перезагрузка' if reboot_detected else 'Без перезагрузки'}"
+          f"{' + проблемы с соединением' if connection_issues else ''}")
     print(uptime_str)
 
     if i < num_screenshots:
@@ -184,5 +178,9 @@ for i in range(1, num_screenshots + 1):
 # Итоговый результат
 success_percentage = (success_count / num_screenshots) * \
     100 if num_screenshots > 0 else 0
+print(f"\nСъемка завершена.")
 print(
-    f"Съемка завершена. Успешно снято {success_count} из {num_screenshots} скриншотов ({success_percentage:.2f}%).")
+    f"Успешно снято {success_count} из {num_screenshots} скриншотов ({success_percentage:.2f}%).")
+print(f"Стабильность устройства: "
+      f"{'Перезагрузка зафиксирована' if reboot_detected else 'Перезагрузок не было'}, "
+      f"{'проблемы с соединением были' if connection_issues else 'соединение стабильно'}")
