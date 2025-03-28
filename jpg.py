@@ -5,6 +5,9 @@ import urllib.error
 
 # Функция для форматирования времени в человеко-читаемый вид
 
+# Пауза x секунд между снимками
+time_ = 1
+
 
 def format_time(seconds):
     if seconds == 0:
@@ -69,7 +72,7 @@ except ValueError:
     exit(1)
 
 # Расчет общего времени выполнения в секундах
-total_time_seconds = num_screenshots * 10
+total_time_seconds = num_screenshots * time_
 
 # Форматирование времени
 formatted_time = format_time(total_time_seconds)
@@ -101,8 +104,8 @@ for i in range(1, num_screenshots + 1):
     except urllib.error.URLError as e:
         print(f"Ошибка при снятии скриншота {i}: {e}")
         failure_count += 1
-    # Пауза 10 секунд между снимками
-    time.sleep(10)
+
+    time.sleep(time_)
 
 # Подсчет процента успешных скриншотов
 success_percentage = (success_count / num_screenshots) * \
