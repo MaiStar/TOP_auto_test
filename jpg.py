@@ -5,9 +5,6 @@ import urllib.error
 
 # Функция для форматирования времени в человеко-читаемый вид
 
-# Пауза x секунд между снимками
-time_ = 1
-
 
 def format_time(seconds):
     if seconds == 0:
@@ -72,7 +69,7 @@ except ValueError:
     exit(1)
 
 # Расчет общего времени выполнения в секундах
-total_time_seconds = num_screenshots * time_
+total_time_seconds = num_screenshots * 10
 
 # Форматирование времени
 formatted_time = format_time(total_time_seconds)
@@ -87,17 +84,19 @@ url = f"http://{ip_address}:85/image.jpg"
 success_count = 0
 failure_count = 0
 
+# Время начала съемки
+start_time = time.time()
+
 # Съемка скриншотов
 for i in range(1, num_screenshots + 1):
     try:
         # Выполнение HTTP-запроса
         with urllib.request.urlopen(url) as response:
             if response.status == 200:
-                # Сохранение скриншота
-                screenshot_path = os.path.join(
-                    screenshot_dir, f"screenshot_{i}.jpg")
-                with open(screenshot_path, 'wb') as file:
-                    file.write(response.read())
+                # Сохранение скриншота (закомментировано по вашему запросу)
+                # screenshot_path = os.path.join(screenshot_dir, f"screenshot_{i}.jpg")
+                # with open(screenshot_path, 'wb') as file:
+                #     file.write(response.read())
                 success_count += 1
             else:
                 failure_count += 1
@@ -105,7 +104,25 @@ for i in range(1, num_screenshots + 1):
         print(f"Ошибка при снятии скриншота {i}: {e}")
         failure_count += 1
 
-    time.sleep(time_)
+    # Расчет оставшихся скриншотов и времени
+    remaining_screenshots = num_screenshots - i
+    elapsed_time = time.time() - start_time
+    if i > 0:
+        average_time_per_screenshot = elapsed_time / i
+        remaining_time_seconds = int(
+            average_time_per_screenshot * remaining_screenshots)
+    else:
+        remaining_time_seconds = 0
+
+    # Форматирование оставшегося времени
+    formatted_remaining_time = format_time(remaining_time_seconds)
+
+    # Вывод текущего статуса
+    print(f"Снято {i} из {num_screenshots} скриншотов. Осталось {remaining_screenshots} скриншотов, примерно {formatted_remaining_time}.")
+
+    # Пауза 10 секунд между снимками
+    if i < num_screenshots:  # Не делаем паузу после последнего скриншота
+        time.sleep(10)
 
 # Подсчет процента успешных скриншотов
 success_percentage = (success_count / num_screenshots) * \
