@@ -30,13 +30,42 @@ def format_time(seconds):
                           2, 3, 4] else f"{seconds} секунд")
     return ", ".join(time_parts)
 
+# Функция для получения uptime
 
-# Чтение IP-адреса из файла auth
+
+def get_uptime(ip_address, username, password):
+    password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+    password_mgr.add_password(
+        None, f"http://{ip_address}:85", username, password)
+    handler = urllib.request.HTTPBasicAuthHandler(password_mgr)
+    opener = urllib.request.build_opener(handler)
+    url = f"http://{ip_address}:85/cgi-bin/magicBox.cgi?action=getUptime"
+
+    try:
+        with opener.open(url) as response:
+            content = response.read().decode('utf-8')
+            if content.startswith("uptime="):
+                return float(content.split("=")[1])
+            return None
+    except (urllib.error.URLError, ValueError):
+        return None
+
+
+# Чтение данных из файла auth
 try:
     with open('auth', 'r') as file:
-        ip_address = file.readline().strip()
+        lines = file.readlines()
+        if len(lines) != 3:
+            raise ValueError(
+                "Файл auth должен содержать ровно три строки: IP-адрес, логин, пароль")
+        ip_address = lines[0].strip()
+        username = lines[1].strip()
+        password = lines[2].strip()
 except FileNotFoundError:
     print("Файл auth не найден")
+    exit(1)
+except ValueError as e:
+    print(e)
     exit(1)
 
 # Путь к папке для скриншотов
@@ -59,10 +88,26 @@ except ValueError:
 # Пауза между скриншотами (в секундах)
 pause_between_shots = 1
 
-# Расчет общего времени (паузы между скриншотами)
+# Расчет общего времени
 total_time_seconds = (num_screenshots - 1) * pause_between_shots
+
+# Получение начального uptime
+initial_uptime = get_uptime(ip_address, username, password)
+if initial_uptime is None:
+    print("Не удалось получить начальный uptime")
+    exit(1)
+
+# Вывод начальной информации
 print(
     f"Съемка {num_screenshots} скриншотов займет {format_time(total_time_seconds)}.")
+days = int(initial_uptime // (24 * 3600))
+remaining = initial_uptime % (24 * 3600)
+hours = int(remaining // 3600)
+remaining %= 3600
+minutes = int(remaining // 60)
+seconds = int(remaining % 60)
+print(
+    f"Время работы: {days} дней, {hours} часов, {minutes} минут, {seconds} секунд")
 
 # URL для скриншотов
 url = f"http://{ip_address}:85/image.jpg"
@@ -70,28 +115,20 @@ url = f"http://{ip_address}:85/image.jpg"
 # Счетчики
 success_count = 0
 failure_count = 0
-
-# Таймаут для запросов (в секундах)
 timeout = 5
-
-# Начало съемки
 start_time = time.time()
+last_uptime = initial_uptime
 
 # Основной цикл съемки
 for i in range(1, num_screenshots + 1):
     try:
-        # Выполнение HTTP-запроса с таймаутом
         with urllib.request.urlopen(url, timeout=timeout) as response:
             if response.status == 200:
                 success_count += 1
-                # Если нужно сохранять файлы
-                # screenshot_path = os.path.join(screenshot_dir, f"screenshot_{i}.jpg")
-                # with open(screenshot_path, 'wb') as file:
-                #     file.write(response.read())
             else:
                 failure_count += 1
                 print(
-                    f"Ошибка при снятии скриншота {i}: статус {response.status} (неуспешно по таймауту или ошибке)")
+                    f"Ошибка при снятии скриншота {i}: статус {response.status}")
     except urllib.error.URLError as e:
         failure_count += 1
         if 'timed out' in str(e):
@@ -99,26 +136,37 @@ for i in range(1, num_screenshots + 1):
         else:
             print(f"Ошибка при снятии скриншота {i}: {e}")
 
-    # Текущий процент успеха
+    # Получение текущего uptime
+    current_uptime = get_uptime(ip_address, username, password)
+    reboot_detected = current_uptime is not None and current_uptime < last_uptime
+    last_uptime = current_uptime if current_uptime is not None else last_uptime
+
+    # Расчет процентов и времени
     current_success_percentage = (success_count / i) * 100 if i > 0 else 0
-
-    # Оставшиеся скриншоты
     remaining_screenshots = num_screenshots - i
+    elapsed_time = time.time() - start_time
+    average_time_per_screenshot = elapsed_time / i if i > 0 else 0
+    remaining_time_seconds = int(
+        average_time_per_screenshot * remaining_screenshots)
 
-    # Расчет оставшегося времени
-    if i > 0:
-        elapsed_time = time.time() - start_time
-        average_time_per_screenshot = elapsed_time / i
-        remaining_time_seconds = int(
-            average_time_per_screenshot * remaining_screenshots)
+    # Форматирование текущего uptime
+    if current_uptime is not None:
+        days = int(current_uptime // (24 * 3600))
+        remaining = current_uptime % (24 * 3600)
+        hours = int(remaining // 3600)
+        remaining %= 3600
+        minutes = int(remaining // 60)
+        seconds = int(remaining % 60)
+        uptime_str = f"Время работы: {days} дней, {hours} часов, {minutes} минут, {seconds} секунд"
     else:
-        remaining_time_seconds = 0
+        uptime_str = "Не удалось получить uptime"
 
-    # Вывод текущего статуса
+    # Вывод статуса
     print(f"{current_success_percentage:.0f}%. Снято {i} из {num_screenshots} скриншотов. "
           f"Осталось {remaining_screenshots} скриншотов, примерно {format_time(remaining_time_seconds)}.")
+    print(f"{'Была перезагрузка' if reboot_detected else 'Без перезагрузки'}")
+    print(uptime_str)
 
-    # Пауза (кроме последней итерации)
     if i < num_screenshots:
         time.sleep(pause_between_shots)
 
