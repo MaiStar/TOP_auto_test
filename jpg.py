@@ -18,6 +18,20 @@ def format_time(seconds):
     seconds %= 60
     time_parts = []
     if days > 0:
+        time_parts.append(f"{days} день" if days == 1 else f"{days} дня" if days in [
+                          2, 3, 4] else f"{days} дней")
+    if hours > 0:
+        time_parts.append(f"{hours} час" if hours == 1 else f"{hours} часа" if hours in [
+                          2, 3, 4] else f"{hours} часов")
+    if minutes > 0:
+        time_parts.append(f"{minutes} минута" if minutes == 1 else f"{minutes} минуты" if minutes in [
+                          2, 3, 4] else f"{minutes} минут")
+    if seconds > 0 or not time_parts:
+        time_parts.append(f"{seconds} секунда" if seconds == 1 else f"{seconds} секунды" if seconds in [
+                          2, 3, 4] else f"{seconds} секунд")
+    return ", ".join(time_parts)
+
+# Функция для получения uptime
 
 
 def get_uptime(ip_address, username, password):
