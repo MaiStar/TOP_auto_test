@@ -56,8 +56,8 @@ except ValueError:
     print("Пожалуйста, введите положительное целое число.")
     exit(1)
 
-# Пауза между скриншотами как переменная (в секундах)
-pause_between_shots = 1  # Можно изменить, например, на 1, 5, 15 и т.д.
+# Пауза между скриншотами (в секундах)
+pause_between_shots = 1
 
 # Расчет общего времени (паузы между скриншотами)
 total_time_seconds = (num_screenshots - 1) * pause_between_shots
@@ -71,24 +71,33 @@ url = f"http://{ip_address}:85/image.jpg"
 success_count = 0
 failure_count = 0
 
+# Таймаут для запросов (в секундах)
+timeout = 5
+
 # Начало съемки
 start_time = time.time()
 
 # Основной цикл съемки
 for i in range(1, num_screenshots + 1):
     try:
-        with urllib.request.urlopen(url) as response:
+        # Выполнение HTTP-запроса с таймаутом
+        with urllib.request.urlopen(url, timeout=timeout) as response:
             if response.status == 200:
                 success_count += 1
-                # Раскомментируйте, если нужно сохранять файлы
+                # Если нужно сохранять файлы
                 # screenshot_path = os.path.join(screenshot_dir, f"screenshot_{i}.jpg")
                 # with open(screenshot_path, 'wb') as file:
                 #     file.write(response.read())
             else:
                 failure_count += 1
+                print(
+                    f"Ошибка при снятии скриншота {i}: статус {response.status} (неуспешно по таймауту или ошибке)")
     except urllib.error.URLError as e:
-        print(f"Ошибка при снятии скриншота {i}: {e}")
         failure_count += 1
+        if 'timed out' in str(e):
+            print(f"Ошибка при снятии скриншота {i}: таймаут")
+        else:
+            print(f"Ошибка при снятии скриншота {i}: {e}")
 
     # Текущий процент успеха
     current_success_percentage = (success_count / i) * 100 if i > 0 else 0
@@ -96,7 +105,7 @@ for i in range(1, num_screenshots + 1):
     # Оставшиеся скриншоты
     remaining_screenshots = num_screenshots - i
 
-    # Расчет оставшегося времени на основе среднего времени
+    # Расчет оставшегося времени
     if i > 0:
         elapsed_time = time.time() - start_time
         average_time_per_screenshot = elapsed_time / i
