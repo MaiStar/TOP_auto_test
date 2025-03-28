@@ -68,13 +68,15 @@ except ValueError as e:
     print(e)
     exit(1)
 
+"""
 # Путь к папке для скриншотов
 screenshot_dir = 'jpg'
 if os.path.exists(screenshot_dir):
     for file in os.listdir(screenshot_dir):
         os.remove(os.path.join(screenshot_dir, file))
 else:
-    os.makedirs(screenshot_dir)
+    os.makedirs(screenshot_dir)"
+"""
 
 # Ввод количества скриншотов
 try:
@@ -118,6 +120,7 @@ failure_count = 0
 timeout = 5
 start_time = time.time()
 last_uptime = initial_uptime
+reboot_detected = False  # Флаг для отслеживания перезагрузки за весь процесс
 
 # Основной цикл съемки
 for i in range(1, num_screenshots + 1):
@@ -138,8 +141,14 @@ for i in range(1, num_screenshots + 1):
 
     # Получение текущего uptime
     current_uptime = get_uptime(ip_address, username, password)
-    reboot_detected = current_uptime is not None and current_uptime < last_uptime
-    last_uptime = current_uptime if current_uptime is not None else last_uptime
+
+    # Проверка на перезагрузку
+    if current_uptime is not None and last_uptime is not None:
+        if current_uptime + 2 < last_uptime:  # Добавляем погрешность в 2 секунды
+            reboot_detected = True
+        last_uptime = current_uptime
+    elif current_uptime is not None:
+        last_uptime = current_uptime
 
     # Расчет процентов и времени
     current_success_percentage = (success_count / i) * 100 if i > 0 else 0
