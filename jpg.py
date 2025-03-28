@@ -3,7 +3,6 @@ import time
 import urllib.request
 import urllib.error
 import http.client
-import socket  # Добавляем для обработки TimeoutError
 
 # Функция для форматирования времени
 
@@ -49,8 +48,8 @@ def get_uptime(ip_address, username, password):
             if content.startswith("uptime="):
                 return float(content.split("=")[1])
             return None
-    except (urllib.error.URLError, ValueError, http.client.HTTPException, socket.TimeoutError):
-        return None  # Возвращаем None при любых ошибках, включая таймаут
+    except (urllib.error.URLError, ValueError, http.client.HTTPException, TimeoutError):
+        return None  # Обрабатываем TimeoutError как встроенное исключение
 
 
 # Чтение данных из файла auth
@@ -145,10 +144,10 @@ for i in range(1, num_screenshots + 1):
         failure_count += 1
         connection_issues = True
         print(f"Ошибка при снятии скриншота {i}: разрыв соединения ({e})")
-    except socket.TimeoutError:
+    except TimeoutError:
         failure_count += 1
         connection_issues = True
-        print(f"Ошибка при снятии скриншота {i}: таймаут на уровне сокета")
+        print(f"Ошибка при снятии скриншота {i}: таймаут на уровне соединения")
 
     # Получение текущего uptime
     current_uptime = get_uptime(ip_address, username, password)
